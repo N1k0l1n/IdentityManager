@@ -23,16 +23,19 @@ namespace IdentityManager.Controllers
 
         //REGISTER
         [HttpGet]
-        public async Task<IActionResult> Register()
+        public async Task<IActionResult> Register(string? returnurl = null)
         {
+            ViewData["ReturnUrl"] = returnurl;
             RegistrationDTO registrationDTO = new RegistrationDTO();
             return View(registrationDTO);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegistrationDTO dTO)
+        public async Task<IActionResult> Register(RegistrationDTO dTO, string? returnurl=null)
         {
+            ViewData["ReturnUrl"] = returnurl;
+            returnurl = returnurl ?? Url.Content("~/");
             if (ModelState.IsValid)
             {
                 var user = new User { UserName = dTO.Email, Email = dTO.Email, Name = dTO.Name };
@@ -42,7 +45,7 @@ namespace IdentityManager.Controllers
                 if (result.Succeeded)
                 {
                     await _signInManager.SignInAsync(user, isPersistent: false);
-                    return RedirectToAction("Index", "Home");
+                    return LocalRedirect(returnurl);
                 }
                 AddErrors(result);
             }
@@ -54,25 +57,29 @@ namespace IdentityManager.Controllers
 
         //LOGIN
         [HttpGet]
-        public IActionResult Login()
+        public IActionResult Login(string? returnurl=null)
         {
+            ViewData["ReturnUrl"] = returnurl;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginDTO dTO)
+        public async Task<IActionResult> Login(LoginDTO dTO, string? returnurl = null)
         {
+            ViewData["ReturnUrl"] = returnurl;
+            returnurl = returnurl ?? Url.Content("~/");
             if (ModelState.IsValid)
             {
                 var result = await _signInManager.PasswordSignInAsync(dTO.Email, dTO.Password, dTO.RemeberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
-                    return RedirectToAction("Index", "Home");
+                    return LocalRedirect(returnurl);
                 }
                 else
                 {
                     ModelState.AddModelError(string.Empty, "Invalid Login Attempt.");
+                   return View(dTO);
                 }
 
             }
