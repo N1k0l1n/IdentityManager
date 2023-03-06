@@ -1,5 +1,5 @@
-C# Identity Manager for ASP.NET MVC
-This project provides a customizable user authentication and authorization system for ASP.NET MVC applications. It utilizes the ASP.NET Identity framework and provides a UI for managing user accounts, roles, and claims.
+#C# Identity Manager for ASP.NET MVC
+##This project provides a customizable user authentication and authorization system for ASP.NET MVC applications. It utilizes the ASP.NET Identity framework and provides a UI for managing user accounts, roles, and claims.
 
 Features
 User registration and login with email confirmation
