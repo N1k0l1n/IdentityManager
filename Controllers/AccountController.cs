@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace IdentityManager.Controllers
 {
@@ -35,7 +36,7 @@ namespace IdentityManager.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegistrationDTO dTO, string? returnurl=null)
+        public async Task<IActionResult> Register(RegistrationDTO dTO, string? returnurl = null)
         {
             ViewData["ReturnUrl"] = returnurl;
             returnurl = returnurl ?? Url.Content("~/");
@@ -62,15 +63,15 @@ namespace IdentityManager.Controllers
         }
 
         [HttpGet]
-        public async Task <IActionResult> ConfirmEmail(string userId, string code)
+        public async Task<IActionResult> ConfirmEmail(string userId, string code)
         {
-            if(userId == null || code == null)
+            if (userId == null || code == null)
             {
                 return View("Error");
             }
 
             var user = await _userManager.FindByIdAsync(userId);
-            if(user == null)
+            if (user == null)
             {
                 return View("Error");
             }
@@ -84,7 +85,7 @@ namespace IdentityManager.Controllers
 
         //LOGIN
         [HttpGet]
-        public IActionResult Login(string? returnurl=null)
+        public IActionResult Login(string? returnurl = null)
         {
             ViewData["ReturnUrl"] = returnurl;
             return View();
@@ -103,14 +104,14 @@ namespace IdentityManager.Controllers
                 {
                     return LocalRedirect(returnurl);
                 }
-                if(result.IsLockedOut)
+                if (result.IsLockedOut)
                 {
                     return View("Lockout");
                 }
                 else
                 {
                     ModelState.AddModelError(string.Empty, "Invalid Login Attempt.");
-                   return View(dTO);
+                    return View(dTO);
                 }
 
             }
@@ -118,7 +119,7 @@ namespace IdentityManager.Controllers
             return View(dTO);
         }
 
-     
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> LogOff()
@@ -138,7 +139,7 @@ namespace IdentityManager.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
         {
-            if(ModelState.IsValid)
+            if (ModelState.IsValid)
             {
                 var user = await _userManager.FindByEmailAsync(model.Email);
                 if (user == null)
@@ -205,7 +206,87 @@ namespace IdentityManager.Controllers
             return View();
         }
 
+        //EXTERNAL LOGIN
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ExternalLogin(string? provider, string? returnurl = null)
+        {
+            //request a redirect to the external login provider
+            var redirectUrl = Url.Action("ExternalLoginCallback", "Account", new { ReturnUrl = returnurl });
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+            return Challenge(properties, provider);
 
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExternalLoginCallBack(string? returnurl = null, string? remoteError = null)
+        {
+            if (remoteError != null)
+            {
+                ModelState.AddModelError(string.Empty, $"Error from external provider:{remoteError}");
+                return View(nameof(Login));
+            }
+
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+
+            //Sing in the user with the external login provider, if the user already has a login
+            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey,
+                isPersistent: false);
+
+            if (result.Succeeded)
+            {
+                //update any authentication tokens
+                await _signInManager.UpdateExternalAuthenticationTokensAsync(info);
+                return LocalRedirect(returnurl);
+            }
+            else
+            {
+                //If the user does not have an account , then we will ask the user to create one
+                ViewData["ReturnUrl"] = returnurl;
+                ViewData["ProviderDisplayName"] = info.ProviderDisplayName;
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+                var name = info.Principal.FindFirstValue(ClaimTypes.Name);
+                return View("ExternalLoginConfirmation", new ExternalLoginConfirmationViewModel { Email = email, Name = name });
+            }
+
+
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExternalLoginConfirmation(ExternalLoginConfirmationViewModel model, string? returnurl = null)
+        {
+            returnurl = returnurl ?? Url.Content("~/");
+
+            if (ModelState.IsValid)
+            {
+                //get the info about the user from external login provider
+                var info = await _signInManager.GetExternalLoginInfoAsync();
+                if (info == null)
+                {
+                    return View("Error");
+                }
+                var user = new IdentityUser { UserName =  model.Email, Email = model.Email, NormalizedUserName = model.Name };
+                var result = await _userManager.CreateAsync(user);
+                if (result.Succeeded)
+                {
+                    result = await _userManager.AddLoginAsync(user, info);
+                    if(result.Succeeded)
+                    {
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        await _signInManager.UpdateExternalAuthenticationTokensAsync(info);
+                        return LocalRedirect(returnurl);
+                    }
+                }
+                AddErrors(result);
+            }
+            ViewData["ReturnUrl"] = returnurl;
+            return View(model);
+        }
 
         private void AddErrors(IdentityResult result)
         {

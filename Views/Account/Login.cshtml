@@ -1,4 +1,7 @@
 ﻿@model LoginDTO
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> singInManager
+
 <h1 class="text-info">Login</h1>
 <div class="row">
     <div class="col-md-8">
@@ -43,6 +46,32 @@
             </p>
         </form>
     </div>
+    @{
+        var shemes = await singInManager.GetExternalAuthenticationSchemesAsync();
+        var loginProviders = shemes.ToList();
+    }
+    @if(loginProviders.Count() > 0)
+    {
+        <div class="col-md-4">
+            <section>
+                <h4>Use Another Service to Log in.</h4>
+                <form asp-controller="Account" asp-action="ExternalLogin" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" role="form">
+                    <div>
+                        <p>
+                            @foreach(var provider in loginProviders)
+                            {
+                                <button type="submit" class="btn btn-primary" name="provider" 
+                                value="@provider.Name" title="Log in using @provider.Name account">
+                                    @provider.Name
+                                </button>
+                            }
+                        </p>
+                    </div>
+                </form>
+            </section>
+        </div>
+    }
+    
 </div>
 
 
