@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace IdentityManager.Models
 {
-    public class ResetPasswordViewModel
+    public class RegistrationDTO
     {
         [Required]
         [EmailAddress]
@@ -22,6 +22,7 @@ namespace IdentityManager.Models
         [Compare("Password", ErrorMessage ="The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set;}
 
-        public string Code { get; set; }   
+        [Required]
+        public string Name { get; set; }
     }
 }
