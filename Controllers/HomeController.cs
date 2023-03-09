@@ -11,7 +11,7 @@ namespace IdentityManager.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly UserManager<IdentityUser> _userManager;
 
-        public HomeController(ILogger<HomeController> logger, UserManager<IdentityUser> userManager)    
+        public HomeController(ILogger<HomeController> logger, UserManager<IdentityUser> userManager)
         {
             _logger = logger;
             _userManager = userManager;
@@ -31,8 +31,12 @@ namespace IdentityManager.Controllers
             return View();
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public IActionResult Privacy()
+        {
+            return View();
+        }
+        public IActionResult AccessDenied()
         {
             return View();
         }
